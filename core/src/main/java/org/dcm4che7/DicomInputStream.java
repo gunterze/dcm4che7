@@ -110,6 +110,10 @@ public class DicomInputStream extends InputStream {
         return cache.fillFrom(in, length);
     }
 
+    public void skip(long pos, int length) throws IOException {
+        cache.skipFrom(in, pos, length, null);
+    }
+
     public DicomObject readCommandSet() throws IOException {
         if (pos != 0)
             throw new IllegalStateException("Stream position: " + pos);

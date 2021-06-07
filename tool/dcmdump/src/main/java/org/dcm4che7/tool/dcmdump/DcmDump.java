@@ -57,8 +57,9 @@ public class DcmDump implements Callable<Integer> {
         return 0;
     }
 
-    private void onPreamble(DicomInputStream dis) {
+    private void onPreamble(DicomInputStream dis) throws IOException {
         System.out.println(dis.promptPreambleTo(sb.append("0: "), cols));
+        dis.skip(0, 132);
     }
 
     private boolean onElement(DicomInputStream dis, long pos, DicomElement dcmElm)
@@ -67,16 +68,25 @@ public class DcmDump implements Callable<Integer> {
         int valueLength = dcmElm.valueLength();
         sb.setLength(0);
         sb.append(pos).append(": ");
-        if (valueLength > 0)
-            dis.fillCache(dis.getStreamPosition() + Math.min(valueLength, cols));
+        boolean parseItems = valueLength == -1 || dcmElm.vr() == VR.SQ;
+        if (!parseItems)
+            dis.fillCache(dis.getStreamPosition() + Math.min(valueLength, cols * 2));
         dcmElm.promptTo(sb, cols);
         System.out.println(sb);
-        if (tag == Tag.TransferSyntaxUID || tag == Tag.SpecificCharacterSet || TagUtils.isPrivateCreator(tag)) {
+        boolean keep = tag == Tag.TransferSyntaxUID
+                || tag == Tag.SpecificCharacterSet
+                || TagUtils.isPrivateCreator(tag);
+        if (keep) {
             dcmElm.dicomObject().add(dcmElm);
         }
-        if (valueLength == -1 || dcmElm.vr() == VR.SQ) {
+        int headerLength = (int) (dis.getStreamPosition() - pos);
+        if (parseItems) {
+            dis.skip(pos, headerLength);
             dis.parseItems(dcmElm, valueLength);
         } else {
+            if (!keep) {
+                dis.skip(pos, headerLength + valueLength);
+            }
             dis.seek(dis.getStreamPosition() + valueLength);
         }
         return true;
@@ -94,15 +104,18 @@ public class DcmDump implements Callable<Integer> {
                         .append("(FFFE,E000) #").append(itemLength)
                         .append(" Item #").append(dcmElm.vm() + 1);
                 System.out.println(sb);
+                dis.skip(pos, 8);
                 dis.parse(dcmElm.addItem(), itemLength);
             } else {
                 itemHeader.promptTo(sb, cols);
                 System.out.println(sb);
+                dis.skip(pos, 8 + itemLength);
                 dis.seek(dis.getStreamPosition() + itemLength);
             }
         } else {
             itemHeader.promptTo(sb, cols);
             System.out.println(sb);
+            dis.skip(pos, 8 + itemLength);
             dis.seek(dis.getStreamPosition() + itemLength);
         }
         return true;
