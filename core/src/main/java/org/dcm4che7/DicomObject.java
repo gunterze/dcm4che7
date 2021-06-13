@@ -2,6 +2,7 @@ package org.dcm4che7;
 
 import org.dcm4che7.util.OptionalFloat;
 
+import java.io.IOException;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
@@ -12,6 +13,10 @@ import java.util.OptionalLong;
  * @since May 2021
  */
 public interface DicomObject {
+    static DicomObject newDicomObject() {
+        return new WriteableDicomObject();
+    }
+
     SpecificCharacterSet specificCharacterSet();
 
     int size();
@@ -50,9 +55,17 @@ public interface DicomObject {
 
     OptionalDouble getDouble(int tag, int index);
 
-    void add(DicomElement dcmElm);
+    DicomElement setInt(int tag, VR vr, int... vals);
+
+    DicomElement add(DicomElement dcmElm);
 
     int promptTo(StringBuilder appendTo, int maxColumns, int maxLines);
 
     int itemLength();
+
+    int calculateItemLength(DicomOutputStream dicomOutputStream);
+
+    int calculatedItemLength();
+
+    void writeTo(DicomOutputStream dicomOutputStream) throws IOException;
 }

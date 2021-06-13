@@ -2,23 +2,28 @@ package org.dcm4che7;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Optional;
+import java.util.function.IntBinaryOperator;
 
 class DicomSequence extends BasicDicomElement {
-    private final ArrayList<DicomObject> items = new ArrayList<>();
+    private final ArrayList<WriteableDicomObject> items = new ArrayList<>();
 
     DicomSequence(DicomObject dicomObject, int tag, int valueLength) {
         super(dicomObject, tag, VR.SQ, valueLength);
     }
 
     @Override
-    public int vm() {
+    public int numberOfItems() {
         return items.size();
     }
 
     @Override
+    public boolean isEmpty() {
+        return items.isEmpty();
+    }
+
+    @Override
     public void addItem(DicomObject item) {
-        items.add(item);
+        items.add((WriteableDicomObject) item);
     }
 
     @Override
@@ -29,8 +34,8 @@ class DicomSequence extends BasicDicomElement {
     }
 
     @Override
-    public Optional<DicomObject> getItem(int index) throws IOException {
-        return index < items.size() ? Optional.of(((WriteableDicomObject)items.get(index)).parse()) : Optional.empty();
+    public DicomObject getItem(int index) {
+        return ((WriteableDicomObject)items.get(index)).parse();
     }
 
     @Override
@@ -53,5 +58,33 @@ class DicomSequence extends BasicDicomElement {
     @Override
     protected StringBuilder promptValueTo(StringBuilder appendTo, int maxLength) {
         return appendTo;
+    }
+
+    @Override
+    public int elementLength(DicomOutputStream dos) {
+        IntBinaryOperator totalLength = dos.itemLengthEncoding().totalLength;
+        int len = dos.encoding().explicitVR ? 12 : 8;
+        for (WriteableDicomObject item : items) {
+            len += totalLength.applyAsInt(8, item.calculateItemLength(dos));
+        }
+        return len;
+    }
+
+    @Override
+    public int valueLength(DicomOutputStream dos) {
+        if (dos.sequenceLengthEncoding().undefined.test(items.size())) return -1;
+        IntBinaryOperator totalLength = dos.itemLengthEncoding().totalLength;
+        int len = 0;
+        for (WriteableDicomObject item : items) {
+            len += totalLength.applyAsInt(8, item.calculatedItemLength());
+        }
+        return len;
+    }
+
+    @Override
+    public void writeValueTo(DicomOutputStream dos) throws IOException {
+        for (WriteableDicomObject item : items) {
+            item.writeItemTo(dos);
+        }
     }
 }

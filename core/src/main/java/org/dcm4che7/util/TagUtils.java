@@ -45,6 +45,18 @@ public class TagUtils {
                 HEX_DIGITS[tag & 0xF]};
     }
 
+    public static int groupNumber(int tag) {
+        return tag >>> 16;
+    }
+
+    public static int elementNumber(int tag) {
+        return tag & 0xFFFF;
+    }
+
+    public static boolean isGroupLength(int tag) {
+        return elementNumber(tag) == 0;
+    }
+
     public static boolean isPrivateCreator(int tag) {
         return (tag & 0x00010000) != 0 && (tag & 0x0000FF00) == 0 && (tag & 0x000000F0) != 0;
     }
@@ -55,5 +67,9 @@ public class TagUtils {
 
     public static int creatorTagOf(int tag) {
         return (tag & 0xffff0000) | ((tag >>> 8) & 0xff);
+    }
+
+    public static int groupLengthTagOf(int tag) {
+        return tag & 0xffff0000;
     }
 }

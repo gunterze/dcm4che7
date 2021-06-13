@@ -4,7 +4,7 @@
   <xsl:output method="text"></xsl:output>
   <xsl:template match="/uids">
     <xsl:text>
-package org.dcm4che6.core;
+package org.dcm4che7;
 
 import java.util.ResourceBundle;
 

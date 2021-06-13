@@ -40,6 +40,9 @@ public class DcmDump implements Callable<Integer> {
     @CommandLine.Option(names = { "-w", "--width" }, description = "Set output width to <cols>.")
     int cols = 80;
 
+    @CommandLine.Option(names = { "-a", "--alloc" }, description = "Set limit of length of values kept in memory.")
+    int limit = 1024;
+
     private final StringBuilder sb = new StringBuilder();
 
     public static void main(String[] args) {
@@ -59,7 +62,6 @@ public class DcmDump implements Callable<Integer> {
 
     private void onPreamble(DicomInputStream dis) throws IOException {
         System.out.println(dis.promptPreambleTo(sb.append("0: "), cols));
-        dis.skip(0, 132);
     }
 
     private boolean onElement(DicomInputStream dis, long pos, DicomElement dcmElm)
@@ -70,7 +72,7 @@ public class DcmDump implements Callable<Integer> {
         sb.append(pos).append(": ");
         boolean parseItems = valueLength == -1 || dcmElm.vr() == VR.SQ;
         if (!parseItems)
-            dis.fillCache(dis.getStreamPosition() + Math.min(valueLength, cols * 2));
+            dis.fillCache(dis.streamPosition() + Math.min(valueLength, cols * 2));
         dcmElm.promptTo(sb, cols);
         System.out.println(sb);
         boolean keep = tag == Tag.TransferSyntaxUID
@@ -79,15 +81,14 @@ public class DcmDump implements Callable<Integer> {
         if (keep) {
             dcmElm.dicomObject().add(dcmElm);
         }
-        int headerLength = (int) (dis.getStreamPosition() - pos);
+        int headerLength = (int) (dis.streamPosition() - pos);
         if (parseItems) {
-            dis.skip(pos, headerLength);
             dis.parseItems(dcmElm, valueLength);
         } else {
-            if (!keep) {
+            if (!keep && valueLength > limit) {
                 dis.skip(pos, headerLength + valueLength);
             }
-            dis.seek(dis.getStreamPosition() + valueLength);
+            dis.seek(dis.streamPosition() + valueLength);
         }
         return true;
     }
@@ -102,21 +103,21 @@ public class DcmDump implements Callable<Integer> {
             if (dcmElm.vr() == VR.SQ) {
                 dcmElm.promptLevelTo(sb)
                         .append("(FFFE,E000) #").append(itemLength)
-                        .append(" Item #").append(dcmElm.vm() + 1);
+                        .append(" Item #").append(dcmElm.numberOfItems() + 1);
                 System.out.println(sb);
-                dis.skip(pos, 8);
                 dis.parse(dcmElm.addItem(), itemLength);
             } else {
                 itemHeader.promptTo(sb, cols);
                 System.out.println(sb);
-                dis.skip(pos, 8 + itemLength);
-                dis.seek(dis.getStreamPosition() + itemLength);
+                if (itemLength > limit) {
+                    dis.skip(pos, 8 + itemLength);
+                }
+                dis.seek(dis.streamPosition() + itemLength);
             }
         } else {
             itemHeader.promptTo(sb, cols);
             System.out.println(sb);
-            dis.skip(pos, 8 + itemLength);
-            dis.seek(dis.getStreamPosition() + itemLength);
+            dis.seek(dis.streamPosition() + itemLength);
         }
         return true;
     }

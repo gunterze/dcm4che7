@@ -26,6 +26,34 @@ public enum ByteOrder {
             return ((long) bytesToInt(b4, b5, b6, b7) << 32)
                         | (bytesToInt(b0, b1, b2, b3) & 0xffffffffL);
         }
+
+        @Override
+        public void shortToBytes(int val, byte[] dest, int destPos) {
+            dest[destPos] = (byte) val;
+            dest[destPos + 1] = (byte) (val >> 8);
+        }
+
+        @Override
+        public void intToBytes(int val, byte[] dest, int destPos) {
+            dest[destPos] = (byte) val;
+            dest[destPos + 1] = (byte) (val >> 8);
+            dest[destPos + 2] = (byte) (val >> 16);
+            dest[destPos + 3] = (byte) (val >> 24);
+        }
+
+        @Override
+        public void tagToBytes(int val, byte[] dest, int destPos) {
+            dest[destPos] = (byte) (val >> 16);
+            dest[destPos + 1] = (byte) (val >> 24);
+            dest[destPos + 2] = (byte) val;
+            dest[destPos + 3] = (byte) (val >> 8);
+        }
+
+        @Override
+        public void longToBytes(long val, byte[] dest, int destPos) {
+            intToBytes((int) val, dest, destPos);
+            intToBytes((int) (val >> 32), dest, destPos + 4);
+        }
     },
     BIG_ENDIAN {
         @Override
@@ -47,6 +75,31 @@ public enum ByteOrder {
         public long bytesToLong(int b0, int b1, int b2, int b3, int b4, int b5, int b6, int b7) {
             return ((long) bytesToInt(b0, b1, b2, b3) << 32)
                         | (bytesToInt(b4, b5, b6, b7) & 0xffffffffL);
+        }
+
+        @Override
+        public void shortToBytes(int val, byte[] dest, int destPos) {
+            dest[destPos] = (byte) (val >> 8);
+            dest[destPos + 1] = (byte) val;
+        }
+
+        @Override
+        public void intToBytes(int val, byte[] dest, int destPos) {
+            dest[destPos] = (byte) (val >> 24);
+            dest[destPos + 1] = (byte) (val >> 16);
+            dest[destPos + 2] = (byte) (val >> 8);
+            dest[destPos + 3] = (byte) val;
+        }
+
+        @Override
+        public void tagToBytes(int val, byte[] dest, int destPos) {
+            intToBytes(val, dest, destPos);
+        }
+
+        @Override
+        public void longToBytes(long val, byte[] dest, int destPos) {
+            intToBytes((int) (val >> 32), dest, destPos);
+            intToBytes((int) val, dest, destPos + 4);
         }
     };
 
@@ -91,4 +144,12 @@ public enum ByteOrder {
     }
 
     public abstract long bytesToLong(int b0, int b1, int b2, int b3, int b4, int b5, int b6, int b7);
+
+    public abstract void shortToBytes(int val, byte[] dest, int destPos);
+
+    public abstract void intToBytes(int val, byte[] dest, int destPos);
+
+    public abstract void tagToBytes(int val, byte[] dest, int destPos);
+
+    public abstract void longToBytes(long val, byte[] dest, int destPos);
 }

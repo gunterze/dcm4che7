@@ -46,8 +46,8 @@ class BasicDicomElement implements DicomElement {
     }
 
     @Override
-    public int vm() {
-        return 0;
+    public boolean isEmpty() {
+        return valueLength == 0;
     }
 
     @Override
@@ -81,6 +81,11 @@ class BasicDicomElement implements DicomElement {
     }
 
     @Override
+    public int numberOfItems() {
+        return 0;
+    }
+
+    @Override
     public void addItem(DicomObject item) {
         throw new UnsupportedOperationException();
     }
@@ -91,8 +96,8 @@ class BasicDicomElement implements DicomElement {
     }
 
     @Override
-    public Optional<DicomObject> getItem(int index) throws IOException {
-        return Optional.empty();
+    public DicomObject getItem(int index) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -133,4 +138,18 @@ class BasicDicomElement implements DicomElement {
         return appendTo;
     }
 
+    @Override
+    public int elementLength(DicomOutputStream dos) {
+        return (dos.encoding().explicitVR && !vr.evr8 ? 12 : 8) + valueLength;
+
+    }
+
+    @Override
+    public int valueLength(DicomOutputStream dos) {
+        return valueLength;
+    }
+
+    @Override
+    public void writeValueTo(DicomOutputStream dos) throws IOException {
+    }
 }

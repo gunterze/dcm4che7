@@ -1,5 +1,6 @@
 package org.dcm4che7;
 
+import org.dcm4che7.util.IORuntimeException;
 import org.dcm4che7.util.OptionalFloat;
 import org.dcm4che7.util.StringUtils;
 import org.dcm4che7.util.TagUtils;
@@ -20,6 +21,7 @@ class WriteableDicomObject implements DicomObject {
     private volatile SpecificCharacterSet specificCharacterSet;
     private volatile List<DicomElement> elements;
     private volatile CachedPrivateCreator cachedPrivateCreator;
+    private final ThreadLocal<Integer> calculatedItemLength = new ThreadLocal<>();
 
     WriteableDicomObject() {
         this(null, null, SpecificCharacterSet.getDefaultCharacterSet(), new ArrayList<>());
@@ -32,7 +34,7 @@ class WriteableDicomObject implements DicomObject {
     WriteableDicomObject(DicomInputStream dis, DicomElement sequence, SpecificCharacterSet specificCharacterSet,
                          List<DicomElement> elements) {
         this.dis = dis;
-        this.itemPosition = dis != null ? dis.getStreamPosition() - 8 : -1L;
+        this.itemPosition = dis != null ? dis.streamPosition() - 8 : -1L;
         this.sequence = sequence;
         this.specificCharacterSet = specificCharacterSet;
         this.elements = elements;
@@ -156,12 +158,17 @@ class WriteableDicomObject implements DicomObject {
     }
 
     @Override
-    public void add(DicomElement dcmElm) {
+    public DicomElement setInt(int tag, VR vr, int... vals) {
+        return add(vr.type.elementOf(this, tag, vr, vals));
+    }
+
+    @Override
+    public DicomElement add(DicomElement dcmElm) {
         if (dcmElm.dicomObject() != this) {
             throw new IllegalArgumentException("dcmElm belongs to different Dicom Object");
         }
         int tag = dcmElm.tag();
-        if (tag == Tag.ItemDelimitationItem) return;
+        if (tag == Tag.ItemDelimitationItem) return null;
         if (tag == Tag.SpecificCharacterSet) {
             specificCharacterSet = SpecificCharacterSet.valueOf(dcmElm.stringValues());
         }
@@ -175,6 +182,7 @@ class WriteableDicomObject implements DicomObject {
         } else {
             list.add(-(i + 1), dcmElm);
         }
+        return dcmElm;
     }
 
     @Override
@@ -204,15 +212,107 @@ class WriteableDicomObject implements DicomObject {
         return maxLines;
     }
 
-    DicomObject parse() throws IOException {
-        if (elements == null)
-            synchronized (this) {
-                if (elements == null) {
-                    elements = new ArrayList<>();
-                    dis.parseItem(itemPosition, this);
+    @Override
+    public void writeTo(DicomOutputStream dos)
+            throws IOException {
+        for (DicomElement element : elements()) {
+            int tag = element.tag();
+            if (dos.includeGroupLength() || !TagUtils.isGroupLength(tag)) {
+                int valueLength = element.valueLength(dos);
+                dos.writeHeader(tag, element.vr(), valueLength);
+                element.writeValueTo(dos);
+                if (valueLength == -1) {
+                    dos.writeHeader(Tag.SequenceDelimitationItem, VR.NONE, 0);
                 }
             }
+        }
+    }
+
+    @Override
+    public int calculateItemLength(DicomOutputStream dos) {
+        List<DicomElement> elements = elements();
+        int len = 0;
+        boolean includeGroupLength = dos.includeGroupLength();
+        int group = 0;
+        int glen = 0;
+        int count = 0;
+        DicomElement groupLength = null;
+        List<DicomElement> groupLengths = new LinkedList<>();
+        for (DicomElement el : elements) {
+            int nextGroup = TagUtils.groupLengthTagOf(el.tag());
+            if (count++ == 0) {
+                group = nextGroup;
+            } else if (group != nextGroup) {
+                if (includeGroupLength) {
+                    createGroupLength(groupLength, group, glen, groupLengths);
+                    len += 12;
+                }
+                len += glen;
+                glen = 0;
+                group = nextGroup;
+            }
+            if (TagUtils.isGroupLength(el.tag())) {
+                groupLength = el;
+            } else {
+                glen += el.elementLength(dos);
+            }
+        }
+        if (count > 0) {
+            if (includeGroupLength) {
+                createGroupLength(groupLength, group, glen, groupLengths);
+                for (DicomElement elm : groupLengths) {
+                    add(elm);
+                }
+                len += 12;
+            }
+            len += glen;
+        }
+        calculatedItemLength.set(len);
+        return len;
+    }
+
+    private void createGroupLength(DicomElement prev, int gggg0000, int glen, List<DicomElement> list) {
+        if (prev == null
+                || prev.tag() != gggg0000
+                || prev.valueLength() != 12
+                || prev.intValue(0).getAsInt() != glen)
+            list.add(VR.UL.type.elementOf(this, gggg0000, VR.UL, glen));
+    }
+
+    @Override
+    public int calculatedItemLength() {
+        return calculatedItemLength.get();
+    }
+
+    void writeItemTo(DicomOutputStream dos) throws IOException {
+        int size = elements.size();
+        boolean undefinedLength = dos.itemLengthEncoding().undefined.test(size);
+        dos.writeHeader(Tag.Item, VR.NONE, undefinedLength ? -1 : size == 0 ? 0 : calculatedItemLength.get());
+        writeTo(dos);
+        if (undefinedLength) {
+            dos.writeHeader(Tag.ItemDelimitationItem, VR.NONE, 0);
+        }
+    }
+
+    WriteableDicomObject parse() {
+        elements();
         return this;
+    }
+
+    List<DicomElement> elements() {
+        List<DicomElement> elements;
+        if ((elements = this.elements) == null)
+            synchronized (this) {
+                if ((elements = this.elements) == null) {
+                    this.elements = elements = new ArrayList<>();
+                    try {
+                        dis.parseItem(itemPosition, this);
+                    } catch (IOException e) {
+                        throw new IORuntimeException("Failed to parse item at " + itemPosition, e);
+                    }
+                }
+            }
+        return elements;
     }
 
     private static int binarySearch(List<DicomElement> l, int tag) {
@@ -231,7 +331,6 @@ class WriteableDicomObject implements DicomObject {
         return -(low + 1);  // tag not found
     }
 
-
     CachedPrivateCreator privateCreator(int tag) {
         CachedPrivateCreator cachedPrivateCreator = this.cachedPrivateCreator;
         if (cachedPrivateCreator == null || cachedPrivateCreator.tag != tag) {
@@ -240,5 +339,4 @@ class WriteableDicomObject implements DicomObject {
         }
         return cachedPrivateCreator;
     }
-
 }

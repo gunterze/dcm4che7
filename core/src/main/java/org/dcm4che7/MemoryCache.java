@@ -1,6 +1,7 @@
 package org.dcm4che7;
 
 import org.dcm4che7.util.OptionalFloat;
+import org.dcm4che7.util.ToggleEndian;
 
 import java.io.*;
 import java.util.*;
@@ -72,7 +73,7 @@ class MemoryCache {
             eof = off + read < b.length;
             this.limit += read;
         }
-        bytesSkipped(pos, len);
+        skippedBytes.add(new Segment(pos, len));
     }
 
     private void writeTo(OutputStream out, long pos, int len) throws IOException {
@@ -120,16 +121,6 @@ class MemoryCache {
 
             out.write(b, 0, nr);
         } while ((n -= nr) > 0);
-    }
-
-    private void bytesSkipped(long pos, int len) {
-        Segment last;
-        if (!skippedBytes.isEmpty() && pos == (last = skippedBytes.getLast()).end()) {
-            skippedBytes.removeLast();
-            pos = last.pos;
-            len += last.length;
-        }
-        skippedBytes.add(new Segment(pos, len));
     }
 
     private long skippedBytes(long pos) {
@@ -220,6 +211,36 @@ class MemoryCache {
             src = blocks.get(++i);
             copy = Math.min(remaining, src.length);
             System.arraycopy(src, 0, dest, destPos, copy);
+        }
+    }
+
+    void writeBytesTo(long pos, int length, OutputStream out) throws IOException {
+        int i = blockIndex(pos);
+        byte[] src = blocks.get(i);
+        int srcPos = blockOffset(src, pos);
+        int rlen = Math.min(length, src.length - srcPos);
+        out.write(src, srcPos, rlen);
+        int remaining = length;
+        while ((remaining -= rlen) > 0L) {
+            src = blocks.get(++i);
+            rlen = Math.min(remaining, src.length);
+            out.write(src, 0, rlen);
+        }
+    }
+
+    void writeSwappedBytesTo(long pos, int length, OutputStream out, ToggleEndian toggleEndian, byte[] buf)
+            throws IOException {
+        if (buf.length == 0 || (buf.length & 7) != 0) {
+            throw new IllegalArgumentException("buf.length: " + buf.length);
+        }
+        int remaining = length;
+        int copy = 0;
+        while ((remaining -= copy) > 0) {
+            pos += copy;
+            copy =  Math.min(remaining, buf.length);
+            copyBytesTo(pos, buf, 0, copy);
+            toggleEndian.apply(buf, copy);
+            out.write(buf, 0, copy);
         }
     }
 
@@ -338,6 +359,15 @@ class MemoryCache {
             @Override
             protected StringBuilder promptValueTo(StringBuilder appendTo, int maxLength) {
                 return vr.type.promptValueTo(DicomInput.this, valuePos, valueLength, dicomObject, appendTo, maxLength);
+            }
+
+            @Override
+            public void writeValueTo(DicomOutputStream dos) throws IOException {
+                if (encoding.byteOrder == dos.encoding().byteOrder || vr.type.toggleEndian() == null) {
+                    writeBytesTo(valuePos, valueLength, dos);
+                } else {
+                    writeSwappedBytesTo(valuePos, valueLength, dos, vr.type.toggleEndian(), dos.swapBuffer());
+                }
             }
         }
     }

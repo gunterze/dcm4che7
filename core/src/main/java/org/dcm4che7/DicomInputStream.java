@@ -34,12 +34,13 @@ public class DicomInputStream extends InputStream {
     private ItemHandler onItem = DicomInputStream::onItem;
     private PreambleHandler preambleHandler = x -> {};
     private Predicate<DicomElement> parseItemsPredicate = x -> true;
+    private DicomObject fmi;
 
     public DicomInputStream(InputStream in) {
         this.in = Objects.requireNonNull(in);
     }
 
-    public DicomEncoding getEncoding() {
+    public DicomEncoding encoding() {
         return input != null ? input.encoding : null;
     }
 
@@ -75,7 +76,7 @@ public class DicomInputStream extends InputStream {
         return withParseItems(x -> x.tag() != seqTag);
     }
 
-    public long getStreamPosition() {
+    public long streamPosition() {
         return pos;
     }
 
@@ -138,6 +139,10 @@ public class DicomInputStream extends InputStream {
         return parse(dcmObj, -1);
     }
 
+    public DicomObject fileMetaInformation() {
+        return fmi;
+    }
+
     public DicomObject readFileMetaInformation() throws IOException {
         if (pos != 0)
             throw new IllegalStateException("Stream position: " + pos);
@@ -148,10 +153,10 @@ public class DicomInputStream extends InputStream {
             return null;
 
         preambleHandler.accept(this);
-        DicomObject dcmObj = new WriteableDicomObject();
         pos = 132;
         input = cache.dicomInput(DicomEncoding.EVR_LE);
-        DicomElement groupLengthElement  = parseHeader(dcmObj, input);
+        DicomObject fmi = new WriteableDicomObject();
+        DicomElement groupLengthElement  = parseHeader(fmi, input);
         if (groupLengthElement.tag() != Tag.FileMetaInformationGroupLength
                 || groupLengthElement.vr() != VR.UL
                 || groupLengthElement.valueLength() != 4) {
@@ -159,11 +164,12 @@ public class DicomInputStream extends InputStream {
         }
         int groupLength = input.intAt(pos);
         onElement.apply(this, 132, groupLengthElement);
-        parse(dcmObj, groupLength);
-        String tsuid = dcmObj.getString(Tag.TransferSyntaxUID).orElseThrow(
+        parse(fmi, groupLength);
+        String tsuid = fmi.getString(Tag.TransferSyntaxUID).orElseThrow(
                 () -> new DicomParseException("Missing Transfer Syntax UID in File Meta Information"));
         withEncoding(DicomEncoding.of(tsuid));
-        return dcmObj;
+        this.fmi = fmi;
+        return fmi;
     }
 
 
@@ -184,7 +190,7 @@ public class DicomInputStream extends InputStream {
         if (tag == Tag.Item) {
             if (dcmElm.vr() == VR.SQ) {
                 boolean parseItem = parseItemsPredicate.test(dcmElm);
-                DicomObject dcmObj = new WriteableDicomObject(
+                WriteableDicomObject dcmObj = new WriteableDicomObject(
                         this, dcmElm, dcmElm.dicomObject().specificCharacterSet(),
                         parseItem ? new ArrayList<>() : null);
                 dcmElm.addItem(dcmObj);

@@ -1,7 +1,5 @@
 package org.dcm4che7;
 
-import org.dcm4che6.core.UID;
-
 /**
  * @author Gunter Zeilinger (gunterze@protonmail.com)
  * @since Mar 2021

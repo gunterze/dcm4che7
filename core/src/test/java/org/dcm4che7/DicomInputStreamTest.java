@@ -1,6 +1,5 @@
 package org.dcm4che7;
 
-import org.dcm4che6.core.UID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -8,15 +7,15 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Optional;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class DicomInputStreamTest {
+public class DicomInputStreamTest {
 
-    private static final byte[] IVR_LE = {
+    static final byte[] IVR_LE = {
             0x72, 0, 0x5E, 0, 4, 0, 0, 0, 'T', 'E', 'X', 'T',
             0x72, 0, 0x5F, 0, 4, 0, 0, 0, '0', '9', '9', 'Y',
             0x72, 0, 0x60, 0, 4, 0, 0, 0, 0x72, 0, 0x60, 0,
@@ -52,7 +51,7 @@ class DicomInputStreamTest {
             0x72, 0, (byte) 0x82, 0, 8, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1,
             0x72, 0, (byte) 0x83, 0, 8, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1,
     };
-    private static final byte[] EVR_LE = {
+    static final byte[] EVR_LE = {
             0x72, 0, 0x5E, 0, 'A', 'E', 4, 0, 'T', 'E', 'X', 'T',
             0x72, 0, 0x5F, 0, 'A', 'S', 4, 0, '0', '9', '9', 'Y',
             0x72, 0, 0x60, 0, 'A', 'T', 4, 0, 0x72, 0, 0x60, 0,
@@ -88,7 +87,7 @@ class DicomInputStreamTest {
             0x72, 0, (byte) 0x82, 0, 'S', 'V', 0, 0, 8, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1,
             0x72, 0, (byte) 0x83, 0, 'U', 'V', 0, 0, 8, 0, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1,
     };
-    private static final byte[] EVR_BE = {
+    static final byte[] EVR_BE = {
             0, 0x72, 0, 0x5E, 'A', 'E', 0, 4, 'T', 'E', 'X', 'T',
             0, 0x72, 0, 0x5F, 'A', 'S', 0, 4, '0', '9', '9', 'Y',
             0, 0x72, 0, 0x60, 'A', 'T', 0, 4, 0, 0x72, 0, 0x60,
@@ -128,7 +127,7 @@ class DicomInputStreamTest {
             2, 0, 0, 0, 'U', 'L', 4, 0, 30, 0, 0, 0,
             2, 0, 16, 0, 'U', 'I', 22, 0, 49, 46, 50, 46, 56, 52, 48, 46, 49, 48, 48, 48, 56, 46, 49, 46, 50, 46, 49, 46, 57, 57
     };
-    private static final byte[] C_ECHO_RQ = {
+    static final byte[] C_ECHO_RQ = {
             0, 0, 0, 0, 4, 0, 0, 0, 56, 0, 0, 0,
             0, 0, 2, 0, 18, 0, 0, 0, 49, 46, 50, 46, 56, 52, 48, 46, 49, 48, 48, 48, 56, 46, 49, 46, 49, 0,
             0, 0, 0, 1, 2, 0, 0, 0, 48, 0,
@@ -163,14 +162,16 @@ class DicomInputStreamTest {
             'Q', 'U', 'A', 'S', 'A', 'R', '_', 'I', 'N', 'T', 'E', 'R', 'N', 'A', 'L', '_', 'U', 'S', 'E', ' ',
             -2, -1, -35, -32, 0, 0, 0, 0
     };
-    private static final byte[] PER_FRAME_FUNCTIONAL_GROUPS_SEQ_IVR_LE = {
-            0, 82, 48, -110, 40, 0, 0, 0,
-            -2, -1, 0, -32, 32, 0, 0, 0,
+    static final byte[] PER_FRAME_FUNCTIONAL_GROUPS_SEQ_IVR_LE = {
+            0, 82, 48, -110, 56, 0, 0, 0,
+            -2, -1, 0, -32, 40, 0, 0, 0,
             24, 0, 20, -111, 24, 0, 0, 0,
             -2, -1, 0, -32, 16, 0, 0, 0,
-            24, 0, -126, -112, 8, 0, 0, 0, -1, -1, -1, -1, 102, 102, -10, 63
+            24, 0, -126, -112, 8, 0, 0, 0, -1, -1, -1, -1, 102, 102, -10, 63,
+            32, 0, 19, -111, 0, 0, 0, 0,
+            -2, -1, 0, -32, 0, 0, 0, 0
     };
-    private static final byte[] PER_FRAME_FUNCTIONAL_GROUPS_SEQ_EVR_LE = {
+    static final byte[] PER_FRAME_FUNCTIONAL_GROUPS_SEQ_EVR_LE = {
             0, 82, 48, -110, 83, 81, 0, 0, -1, -1, -1, -1,
             -2, -1, 0, -32, -1, -1, -1, -1,
             24, 0, 20, -111, 83, 81, 0, 0, -1, -1, -1, -1,
@@ -178,72 +179,77 @@ class DicomInputStreamTest {
             24, 0, -126, -112, 70, 68, 8, 0, -1, -1, -1, -1, 102, 102, -10, 63,
             -2, -1, 13, -32, 0, 0, 0, 0,
             -2, -1, -35, -32, 0, 0, 0, 0,
+            32, 0, 19, -111, 83, 81, 0, 0, 0, 0, 0, 0,
             -2, -1, 13, -32, 0, 0, 0, 0,
+            -2, -1, 0, -32, 0, 0, 0, 0,
             -2, -1, -35, -32, 0, 0, 0, 0
     };
 
     @Test
-    void readDataSetIVR_LE() throws IOException {
+    public void readDataSetIVR_LE() throws IOException {
         assertDataSet(parseGuessEncoding(IVR_LE, DicomEncoding.IVR_LE));
     }
 
     @Test
-    void readDataSetEVR_LE() throws IOException {
+    public void readDataSetEVR_LE() throws IOException {
         assertDataSet(parseGuessEncoding(EVR_LE, DicomEncoding.EVR_LE));
     }
 
     @Test
-    void readDataSetEVR_BE() throws IOException {
+    public void readDataSetEVR_BE() throws IOException {
         assertDataSet(parseGuessEncoding(EVR_BE, DicomEncoding.EVR_BE));
     }
 
     @Test
-    void readDataSetDEFL() throws IOException {
+    public void readDataSetDEFL() throws IOException {
         assertEquals(34, parseGuessEncoding(DEFL_EVR_LE(), DicomEncoding.DEFL_EVR_LE).size());
     }
 
     @Test
-    void readCommandSet() throws IOException {
-        DicomObject cmd;
-        try (InputStream in = new ByteArrayInputStream(C_ECHO_RQ)) {
-            cmd = new DicomInputStream(in).readCommandSet();
-        }
+    public void readCommandSet() throws IOException {
+        DicomObject cmd = c_echo_rq();
         assertNotNull(cmd);
         assertEquals(48, cmd.getInt(Tag.CommandField).orElseGet(Assertions::fail));
         Assertions.assertEquals(UID.Verification, cmd.getString(Tag.AffectedSOPClassUID).orElseGet(Assertions::fail));
     }
 
     @Test
-    void parseSequenceEVR_LE() throws IOException {
+    public void parseSequenceEVR_LE() throws IOException {
         parseSequence(WF_SEQ_EVR_LE, DicomEncoding.EVR_LE, Tag.WaveformSequence);
     }
 
     @Test
-    void parseSequenceIVR_LE() throws IOException {
+    public void parseSequenceIVR_LE() throws IOException {
         parseSequence(WF_SEQ_IVR_LE, DicomEncoding.IVR_LE, Tag.WaveformSequence);
     }
 
     @Test
-    void parseSequenceUN_IVR_LE() throws IOException {
+    public void parseSequenceUN_IVR_LE() throws IOException {
         parseSequence(UN_SEQ_IVR_LE, DicomEncoding.EVR_LE, 0x00371010);
     }
 
     @Test
-    void parseSequenceUN_EVR_LE() throws IOException {
+    public void parseSequenceUN_EVR_LE() throws IOException {
         parseSequence(UN_SEQ_EVR_LE, DicomEncoding.EVR_LE, 0x00371010);
     }
 
     @Test
-    void parsePerFrameFunctionalGroupsSequenceLazyIVR_LE() throws IOException {
+    public void parsePerFrameFunctionalGroupsSequenceLazyIVR_LE() throws IOException {
         parsePerFrameFunctionalGroupsSequenceLazy(PER_FRAME_FUNCTIONAL_GROUPS_SEQ_IVR_LE, DicomEncoding.IVR_LE);
     }
 
     @Test
-    void parsePerFrameFunctionalGroupsSequenceLazyEVR_LE() throws IOException {
+    public void parsePerFrameFunctionalGroupsSequenceLazyEVR_LE() throws IOException {
         parsePerFrameFunctionalGroupsSequenceLazy(PER_FRAME_FUNCTIONAL_GROUPS_SEQ_EVR_LE, DicomEncoding.EVR_LE);
     }
 
-    private static byte[] DEFL_EVR_LE() {
+    static DicomObject c_echo_rq() throws IOException {
+        try (InputStream in = new ByteArrayInputStream(C_ECHO_RQ)) {
+            return new DicomInputStream(in).readCommandSet();
+        }
+    }
+
+    static byte[] DEFL_EVR_LE() {
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             out.write(new byte[128]);
             out.write(DEFL_EVR_LE);
@@ -260,8 +266,7 @@ class DicomInputStreamTest {
     static void parseSequence(byte[] b, DicomEncoding encoding, int tag) throws IOException {
         DicomElement el = parseWithEncoding(b, encoding).get(tag).orElseGet(Assertions::fail);
         assertEquals(VR.SQ, el.vr());
-        Optional<DicomObject> item = el.getItem(0);
-        assertTrue(item.isPresent());
+        assertEquals(1, el.numberOfItems());
     }
 
     static DicomObject parseWithEncoding(byte[] b, DicomEncoding encoding) throws IOException {
@@ -273,7 +278,7 @@ class DicomInputStreamTest {
     static DicomObject parseGuessEncoding(byte[] b, DicomEncoding encoding) throws IOException {
         try (DicomInputStream dis = new DicomInputStream(new ByteArrayInputStream(b))) {
             DicomObject dcmObj = dis.readDataSet();
-            assertEquals(encoding, dis.getEncoding());
+            assertEquals(encoding, dis.encoding());
             return dcmObj;
         }
     }
@@ -318,10 +323,13 @@ class DicomInputStreamTest {
     static void parsePerFrameFunctionalGroupsSequenceLazy(byte[] b, DicomEncoding encoding) throws IOException {
         DicomElement functionalGroupSeq = parseLazy(b, encoding, Tag.PerFrameFunctionalGroupsSequence)
                 .get(Tag.PerFrameFunctionalGroupsSequence).orElseGet(Assertions::fail);
-        DicomObject functionalGroup = functionalGroupSeq.getItem(0).orElseGet(Assertions::fail);
+        DicomObject functionalGroup = functionalGroupSeq.getItem(0);
         DicomElement mrEchoSeq = functionalGroup.get(Tag.MREchoSequence).orElseGet(Assertions::fail);
-        DicomObject mrEcho = mrEchoSeq.getItem(0).orElseGet(Assertions::fail);
+        DicomObject mrEcho = mrEchoSeq.getItem(0);
         assertEquals(1.4000005722045896, mrEcho.getDouble(Tag.EffectiveEchoTime).orElseGet(Assertions::fail));
+        DicomElement planePositionSeq = functionalGroup.get(Tag.PlanePositionSequence).orElseGet(Assertions::fail);
+        assertTrue(planePositionSeq.isEmpty());
+        assertTrue(functionalGroupSeq.getItem(1).isEmpty());
     }
 
     static DicomObject parseLazy(byte[] b, DicomEncoding encoding, int seqTag) throws IOException {

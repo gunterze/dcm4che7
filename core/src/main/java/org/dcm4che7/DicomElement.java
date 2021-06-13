@@ -17,18 +17,21 @@ public interface DicomElement {
     int tag();
     VR vr();
     int valueLength();
-    int vm();
+    boolean isEmpty();
     OptionalInt intValue(int index);
     OptionalLong longValue(int index);
     OptionalFloat floatValue(int index);
     OptionalDouble doubleValue(int index);
     Optional<String> stringValue(int index);
     String[] stringValues();
+    int numberOfItems();
     DicomObject addItem();
     void addItem(DicomObject item);
-    Optional<DicomObject> getItem(int index) throws IOException;
+    DicomObject getItem(int index) throws IOException;
     StringBuilder promptTo(StringBuilder appendTo, int maxLength);
     int promptItemsTo(StringBuilder appendTo, int maxColumns, int maxLines);
-
     StringBuilder promptLevelTo(StringBuilder appendTo);
+    int elementLength(DicomOutputStream dos);
+    int valueLength(DicomOutputStream dos);
+    void writeValueTo(DicomOutputStream dos) throws IOException;
 }

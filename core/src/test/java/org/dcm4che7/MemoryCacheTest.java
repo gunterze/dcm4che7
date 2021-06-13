@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Gunter Zeilinger (gunterze@protonmail.com)
  * @since Mar 2021
  */
-class MemoryCacheTest {
+public class MemoryCacheTest {
 
     private static InputStream createInputStream(int length, int modulo) {
         byte[] buf = new byte[length];
@@ -23,7 +23,7 @@ class MemoryCacheTest {
     }
 
     @Test
-    void fillFrom() throws IOException {
+    public void fillFrom() throws IOException {
         MemoryCache memoryCache = new MemoryCache();
         InputStream in = createInputStream(1000, 255);
         assertEquals(400, memoryCache.fillFrom(in, 400));

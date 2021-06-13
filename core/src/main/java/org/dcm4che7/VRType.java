@@ -3,6 +3,7 @@ package org.dcm4che7;
 import org.dcm4che7.MemoryCache.DicomInput;
 import org.dcm4che7.util.OptionalFloat;
 import org.dcm4che7.util.StringUtils;
+import org.dcm4che7.util.ToggleEndian;
 
 import java.util.Optional;
 import java.util.OptionalDouble;
@@ -47,13 +48,7 @@ interface VRType {
         return StringUtils.EMPTY_STRINGS;
     }
 
-    VRType SQ = new VRType(){
-        @Override
-        public StringBuilder promptValueTo(DicomInput dicomInput, long valuePos, int valueLength,
-                                           DicomObject dicomObject, StringBuilder sb, int maxLength) {
-            throw new UnsupportedOperationException();
-        }
-    };
+    VRType SQ = new VRType(){};
 
     VRType UN = new VRType(){
         @Override
@@ -98,6 +93,16 @@ interface VRType {
         }
     };
 
-    StringBuilder promptValueTo(DicomInput dicomInput, long valuePos, int valueLength,
-                                DicomObject dicomObject, StringBuilder sb, int maxLength);
+    default StringBuilder promptValueTo(DicomInput dicomInput, long valuePos, int valueLength,
+                                DicomObject dicomObject, StringBuilder sb, int maxLength) {
+        throw new UnsupportedOperationException();
+    }
+
+    default DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, int... vals) {
+        throw new UnsupportedOperationException();
+    }
+
+    default ToggleEndian toggleEndian() {
+        return null;
+    }
 }
