@@ -24,6 +24,10 @@ public class SpecificCharacterSet {
     protected final Codec[] codecs;
     protected final String[] dicomCodes;
 
+    public int bytesPerChar() {
+        return codecs[0].bytesPerChar;
+    }
+
     private enum Codec {
         ISO_646("US-ASCII", true, 0x2842, 0, 1),
         ISO_8859_1("ISO-8859-1", true, 0x2842, 0x2d41, 1),
@@ -210,6 +214,11 @@ public class SpecificCharacterSet {
 
         private ISO2022(Codec[] charsetInfos, String... codes) {
             super(charsetInfos, codes);
+        }
+
+        @Override
+        public int bytesPerChar() {
+            return -1;
         }
 
         @Override

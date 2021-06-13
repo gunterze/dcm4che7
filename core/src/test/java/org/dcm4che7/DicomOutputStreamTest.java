@@ -94,7 +94,8 @@ public class DicomOutputStreamTest {
                 writeDataSet(DicomEncoding.EVR_LE, false,
                         DicomOutputStream.LengthEncoding.UNDEFINED_OR_ZERO,
                         DicomOutputStream.LengthEncoding.UNDEFINED_OR_ZERO,
-                        readDataset(SEQ_IVR_LE_GROUP_LENGTH, DicomEncoding.IVR_LE)));
+                        readDataset(DicomInputStreamTest.PER_FRAME_FUNCTIONAL_GROUPS_SEQ_IVR_LE,
+                                DicomEncoding.IVR_LE)));
     }
 
     @Test
@@ -103,7 +104,8 @@ public class DicomOutputStreamTest {
                 writeDataSet(DicomEncoding.IVR_LE, false,
                         DicomOutputStream.LengthEncoding.EXPLICIT,
                         DicomOutputStream.LengthEncoding.EXPLICIT,
-                        readDataset(SEQ_IVR_LE_GROUP_LENGTH, DicomEncoding.IVR_LE)));
+                        readDataset(DicomInputStreamTest.PER_FRAME_FUNCTIONAL_GROUPS_SEQ_IVR_LE,
+                                DicomEncoding.IVR_LE)));
     }
 
     @Test
@@ -112,12 +114,21 @@ public class DicomOutputStreamTest {
                 writeDataSet(DicomEncoding.IVR_LE, true,
                         DicomOutputStream.LengthEncoding.EXPLICIT,
                         DicomOutputStream.LengthEncoding.UNDEFINED,
-                        readDataset(SEQ_IVR_LE_GROUP_LENGTH, DicomEncoding.IVR_LE)));
+                        readDataset(DicomInputStreamTest.PER_FRAME_FUNCTIONAL_GROUPS_SEQ_IVR_LE,
+                                DicomEncoding.IVR_LE)));
+    }
+
+    @Test
+    public void writeParsedCommandSet() throws IOException {
+        writeCommandSet(DicomInputStreamTest.c_echo_rq());
     }
 
     @Test
     public void writeCommandSet() throws IOException {
-        DicomObject cmd = DicomInputStreamTest.c_echo_rq();
+        writeCommandSet(c_echo_rq());
+    }
+
+    private static void writeCommandSet(DicomObject cmd) throws IOException {
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         try (DicomOutputStream dos = new DicomOutputStream(bout)) {
             dos.writeCommandSet(cmd);
@@ -146,15 +157,13 @@ public class DicomOutputStreamTest {
         return bout.toByteArray();
     }
 
-
-/*
-
+    static DicomObject c_echo_rq() throws IOException {
         DicomObject cmd = DicomObject.newDicomObject();
         cmd.setString(Tag.AffectedSOPClassUID, VR.UI, UID.Verification);
         cmd.setInt(Tag.CommandField, VR.US, 48);
         cmd.setInt(Tag.MessageID, VR.US, 1);
         cmd.setInt(Tag.CommandDataSetType, VR.US, 0x0101);
         return cmd;
-*/
+    }
 
 }

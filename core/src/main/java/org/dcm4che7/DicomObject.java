@@ -55,6 +55,8 @@ public interface DicomObject {
 
     OptionalDouble getDouble(int tag, int index);
 
+    DicomElement setInt(int tag, VR vr, int val);
+
     DicomElement setInt(int tag, VR vr, int... vals);
 
     DicomElement add(DicomElement dcmElm);

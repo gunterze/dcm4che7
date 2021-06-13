@@ -108,13 +108,13 @@ class WriteableDicomObject implements DicomObject {
     }
 
     @Override
-    public DicomElement setString(int tag, VR vr, String value) {
-        return null;
+    public DicomElement setString(int tag, VR vr, String val) {
+        return add(vr.type.elementOf(this, tag, vr, val));
     }
 
     @Override
-    public DicomElement setStrings(int tag, VR vr, String... values) {
-        return null;
+    public DicomElement setStrings(int tag, VR vr, String... vals) {
+        return add(vr.type.elementOf(this, tag, vr, vals));
     }
 
     @Override
@@ -125,6 +125,16 @@ class WriteableDicomObject implements DicomObject {
     @Override
     public OptionalInt getInt(int tag, int index) {
         return get(tag).map(el -> el.intValue(index)).orElse(OptionalInt.empty());
+    }
+
+    @Override
+    public DicomElement setInt(int tag, VR vr, int val) {
+        return add(vr.type.elementOf(this, tag, vr, val));
+    }
+
+    @Override
+    public DicomElement setInt(int tag, VR vr, int... vals) {
+        return add(vr.type.elementOf(this, tag, vr, vals));
     }
 
     @Override
@@ -155,11 +165,6 @@ class WriteableDicomObject implements DicomObject {
     @Override
     public OptionalDouble getDouble(int tag, int index) {
         return get(tag).map(el -> el.doubleValue(index)).orElse(OptionalDouble.empty());
-    }
-
-    @Override
-    public DicomElement setInt(int tag, VR vr, int... vals) {
-        return add(vr.type.elementOf(this, tag, vr, vals));
     }
 
     @Override

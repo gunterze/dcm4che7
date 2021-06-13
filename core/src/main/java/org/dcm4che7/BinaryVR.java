@@ -270,6 +270,13 @@ enum BinaryVR implements VRType {
     }
 
     @Override
+    public DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, int val) {
+        byte[] b = new byte[bytes];
+        intToBytes(val, b, 0);
+        return new ByteArrayElement(dcmObj, tag, vr, b);
+    }
+
+    @Override
     public DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, int... vals) {
         if (vals.length == 0) {
             return new BasicDicomElement(dcmObj, tag, vr, 0);

@@ -13,36 +13,43 @@ import java.util.function.Function;
  * @since Mar 2021
  */
 enum StringVR implements VRType {
-    ASCII(VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii),
-    STRING(VM.MULTI, Trim.LEADING_AND_TRAILING, DicomObject::specificCharacterSet),
-    TEXT(VM.SINGLE, Trim.TRAILING, DicomObject::specificCharacterSet),
-    DS(VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii) {
+    ASCII("\\", VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii),
+    STRING("\\", VM.MULTI, Trim.LEADING_AND_TRAILING, DicomObject::specificCharacterSet),
+    TEXT("\n\t\f", VM.SINGLE, Trim.TRAILING, DicomObject::specificCharacterSet),
+    DS("\\", VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii) {
         @Override
         public OptionalInt intValue(DicomInput dicomInput, long valuePos, int valueLength, int index) {
             Optional<String> s = stringValue(dicomInput, valuePos, valueLength, index, null);
             return s.isPresent() ? OptionalInt.of((int) Double.parseDouble(s.get())) : OptionalInt.empty();
         }
     },
-    IS(VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii) {
+    IS("\\", VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii) {
         @Override
         public OptionalInt intValue(DicomInput dicomInput, long valuePos, int valueLength, int index) {
             Optional<String> s = stringValue(dicomInput, valuePos, valueLength, index, null);
             return s.isPresent() ? OptionalInt.of(Integer.parseInt(s.get())) : OptionalInt.empty();
         }
     },
-    PN(VM.MULTI, Trim.LEADING_AND_TRAILING, DicomObject::specificCharacterSet),
-    UC(VM.MULTI, Trim.TRAILING, StringVR::ascii),
-    UR(VM.SINGLE, Trim.LEADING_AND_TRAILING, StringVR::ascii),
-    UI(VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii);
+    PN("\\^=", VM.MULTI, Trim.LEADING_AND_TRAILING, DicomObject::specificCharacterSet),
+    UC("\\", VM.MULTI, Trim.TRAILING, StringVR::ascii),
+    UR("", VM.SINGLE, Trim.LEADING_AND_TRAILING, StringVR::ascii),
+    UI("\\", VM.MULTI, Trim.LEADING_AND_TRAILING, StringVR::ascii);
 
+    private final String delimiters;
     private final VM vm;
     private final StringUtils.Trim trim;
     private final Function<DicomObject, SpecificCharacterSet> asciiOrCS;
 
-    StringVR(VM vm, StringUtils.Trim trim, Function<DicomObject, SpecificCharacterSet> asciiOrCS) {
+    StringVR(String delimiters, VM vm, Trim trim, Function<DicomObject, SpecificCharacterSet> asciiOrCS) {
+        this.delimiters = delimiters;
         this.vm = vm;
         this.trim = trim;
         this.asciiOrCS = asciiOrCS;
+    }
+
+    @Override
+    public String delimiters() {
+        return delimiters;
     }
 
     @Override
@@ -66,8 +73,22 @@ enum StringVR implements VRType {
     }
 
     @Override
+    public DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, String val) {
+        return new StringElement(dcmObj, tag, vr, val);
+    }
+
+    @Override
+    public DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, String... vals) {
+        if (vals.length == 0) {
+            return new BasicDicomElement(dcmObj, tag, vr, 0);
+        }
+        return elementOf(dcmObj, tag, vr, vm.join(vr, vals));
+    }
+
+
+    @Override
     public StringBuilder promptValueTo(DicomInput input, long valuePos, int valueLen, DicomObject dcmobj,
-            StringBuilder sb, int maxLength) {
+                                       StringBuilder sb, int maxLength) {
         sb.append(" [");
         int limitValueLen = (maxLength - sb.length() - 1) * 2; // assume max 2 bytes by char
         if (limitValueLen < valueLen) {

@@ -98,11 +98,31 @@ interface VRType {
         throw new UnsupportedOperationException();
     }
 
+    default DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, String val) {
+        throw new UnsupportedOperationException();
+    }
+
+    default DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, String... vals) {
+        throw new UnsupportedOperationException();
+    }
+
+    default DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, int val) {
+        throw new UnsupportedOperationException();
+    }
+
     default DicomElement elementOf(DicomObject dcmObj, int tag, VR vr, int... vals) {
         throw new UnsupportedOperationException();
     }
 
     default ToggleEndian toggleEndian() {
         return null;
+    }
+
+    default String delimiters() {
+        throw new UnsupportedOperationException();
+    }
+
+    default int paddingByte() {
+        return 0;
     }
 }

@@ -140,13 +140,13 @@ class BasicDicomElement implements DicomElement {
 
     @Override
     public int elementLength(DicomOutputStream dos) {
-        return (dos.encoding().explicitVR && !vr.evr8 ? 12 : 8) + valueLength;
+        return (dos.encoding().explicitVR && !vr.evr8 ? 12 : 8) + valueLength();
 
     }
 
     @Override
     public int valueLength(DicomOutputStream dos) {
-        return valueLength;
+        return valueLength();
     }
 
     @Override
